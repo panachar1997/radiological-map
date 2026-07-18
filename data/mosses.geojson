@@ -1,0 +1,15 @@
+{
+"type": "FeatureCollection",
+"name": "mosses2",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "No.": 12, "Location": "Αλιάκμονας Νεστόριο", "Cs-137 (Bq/Kg)": " Green: 92.33829183, Dried: 185.1599865", "Γ.ΠΛΑΤΟΣ": 40.405572, "Γ.ΜΗΚΟΣ": 21.063881 }, "geometry": { "type": "Point", "coordinates": [ 21.063881, 40.405572 ] } },
+{ "type": "Feature", "properties": { "No.": 24, "Location": "Αρένες Γράμμος", "Cs-137 (Bq/Kg)": "277.0717551", "Γ.ΠΛΑΤΟΣ": 40.3092389, "Γ.ΜΗΚΟΣ": 20.9162333 }, "geometry": { "type": "Point", "coordinates": [ 20.9162333, 40.3092389 ] } },
+{ "type": "Feature", "properties": { "No.": 40, "Location": "Πανόραμα Πλατανάκια", "Cs-137 (Bq/Kg)": "Low: 140.2463067, High: 30.39786514", "Γ.ΠΛΑΤΟΣ": 40.593875, "Γ.ΜΗΚΟΣ": 23.0536333 }, "geometry": { "type": "Point", "coordinates": [ 23.0536333, 40.593875 ] } },
+{ "type": "Feature", "properties": { "No.": 43, "Location": "Τριάδι Λίμνη", "Cs-137 (Bq/Kg)": "Low: 22.50217737, High: 27.523", "Γ.ΠΛΑΤΟΣ": 40.5536833, "Γ.ΜΗΚΟΣ": 23.0717139 }, "geometry": { "type": "Point", "coordinates": [ 23.0717139, 40.5536833 ] } },
+{ "type": "Feature", "properties": { "No.": 46, "Location": "Βεργίνα Πλατανάκια", "Cs-137 (Bq/Kg)": "Low: 18.21410999, High: 85.58677184", "Γ.ΠΛΑΤΟΣ": 40.4817833, "Γ.ΜΗΚΟΣ": 22.3073889 }, "geometry": { "type": "Point", "coordinates": [ 22.3073889, 40.4817833 ] } },
+{ "type": "Feature", "properties": { "No.": 67, "Location": "Αρκουδόρεμα", "Cs-137 (Bq/Kg)": "Low: 74.09191187, High: 76.41478195", "Γ.ΠΛΑΤΟΣ": 41.345369, "Γ.ΜΗΚΟΣ": 24.588872 }, "geometry": { "type": "Point", "coordinates": [ 24.588872, 41.345369 ] } },
+{ "type": "Feature", "properties": { "No.": 71, "Location": "Νάουσα", "Cs-137 (Bq/Kg)": "513.9402864", "Γ.ΠΛΑΤΟΣ": 40.610225, "Γ.ΜΗΚΟΣ": 22.043564 }, "geometry": { "type": "Point", "coordinates": [ 22.043564, 40.610225 ] } },
+{ "type": "Feature", "properties": { "No.": 800, "Location": "Παρανέστι ", "Cs-137 (Bq/Kg)": "Low: 61.90286505, High: 63.1253 ", "Γ.ΠΛΑΤΟΣ": 41.267839, "Γ.ΜΗΚΟΣ": 24.488653 }, "geometry": { "type": "Point", "coordinates": [ 24.488653, 41.267839 ] } }
+]
+}

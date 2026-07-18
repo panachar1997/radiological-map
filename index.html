@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="Interactive mapping and correlation of environmental radioactivity with geological data in Greece."
+    />
+    <title>Environmental Radioactivity & Geological Data Map</title>
+    <!-- for leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <!-- for leaflet ruler-->
+    <link
+      rel="stylesheet"
+      href="vendor/leaflet-ruler/src/leaflet-ruler.css"
+    />
+    <script src="vendor/leaflet-ruler/src/leaflet-ruler.js"></script>
+
+    <!-- for leaflet control geocoder-->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"
+    />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <!-- for turf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.3.0/turf.min.js"></script>
+    <!-- for Fullscreen -->
+    <link
+      rel="stylesheet"
+      href="vendor/leaflet-fullscreen/dist/leaflet.fullscreen.css"
+    />
+    <script src="vendor/leaflet-fullscreen/dist/Leaflet.fullscreen.js"></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      .leaflet-container {
+        height: 100vh;
+        height: 100dvh;
+        width: 100%;
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      #coordinate {
+        position: absolute;
+        left: 100px;
+        bottom: 5px;
+        background: rgb(255, 255, 255);
+        z-index: 1000;
+        padding: 5px;
+        border-radius: 10px;
+        height: 25px;
+        display: flex;
+        /* or display: inline-flex; */
+        align-items: center;
+        justify-content: center;
+        width: 250px;
+      }
+
+      #popupInfo {
+        display: none;
+        position: absolute;
+        left: 50px;
+        top: 80px;
+        bottom: 50px;
+        width: 300px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        overflow-y: auto;
+        direction: rtl;
+        text-align: left;
+      }
+
+      #memorandum {
+        display: none;
+        position: absolute;
+        bottom: 50px;
+        left: 30px;
+        width: 200px;
+        height: auto;
+        z-index: 1000;
+      }
+
+      #legend {
+        display: none;
+        background: rgba(255, 255, 255, 0.801);
+        padding: 10px;
+        border: 1px solid #ccc;
+        position: absolute;
+        bottom: 50px;
+        right: 20px;
+      }
+
+      .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+      }
+
+      /* .leaflet-bottom.leaflet-right .leaflet-control {
+            margin-bottom: 10px;
+        } */
+
+      .leaflet-control-layers .leaflet-control-layers-toggle {
+        width: 35px !important;
+        height: 35px !important;
+      }
+
+      .leaflet-touch .leaflet-control-geocoder-icon {
+        width: 35px;
+        height: 35px;
+      }
+
+      @media (max-width: 640px) {
+        #coordinate {
+          left: 10px;
+          width: auto;
+          max-width: calc(100% - 80px);
+          font-size: 12px;
+        }
+
+        #popupInfo {
+          left: 10px;
+          width: calc(100% - 42px);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map" style="width: 100%">
+      <div id="coordinate"></div>
+      <div id="popupInfo" class="popup-container"></div>
+      <img id="memorandum" src="assets/mem.png" alt="Geological map legend" />
+      <div id="legend" class="leaflet-bottom leaflet-right">
+        <div class="info legend leaflet-control">
+          Bq / L<br />
+          <i style="background: #eef779"></i> 0-25<br />
+          <i style="background: hsl(36, 89%, 52%)"></i> 25-50<br />
+          <i style="background: #e93010"></i> 50-100<br />
+          <i style="background: rgb(126, 4, 4)"></i> 100+
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const map = L.map("map").setView(
+        [37.50209686668296, 24.0593101229436],
+        6
+      );
+      L.Control.geocoder().addTo(map);
+      map.addControl(new L.Control.Fullscreen());
+      map.on("mousemove", function (e) {
+        document.getElementById(
+          "coordinate"
+        ).textContent = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      });
+      L.control.scale().addTo(map);
+      var rulerControl = L.control.ruler().addTo(map);
+
+      var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      var CartoDB_DarkMatter = L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: "abcd",
+          maxZoom: 20,
+        }
+      );
+
+      var Esri_WorldImagery = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          attribution:
+            "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+          maxZoom: 18,
+        }
+      );
+
+      const geoJsonUrl1 = "data/bedRock.geoJSON";
+      const geoJsonUrl2 = "data/radonConcentrationCityWaterSupply.geojson";
+      const geoJsonUrl3 = "data/radonConcentrationInSourceWater.geojson";
+      const geoJsonUrl4 =
+        "data/radonConcentrationWaterSupplyOfVillagesTowns.geojson";
+      const geoJsonUrl5 = "data/greeceRegions.geojson";
+      const geoJsonUrl6 = "data/RegionalUnits.geojson";
+      const geoJsonUrl7 = "data/greeceMunicipalities.geojson";
+      const geoJsonUrl8 = "data/greeceFaults.geojson";
+      const geoJsonUrl9 = "data/soil.geojson";
+      const geoJsonUrl10 = "data/mosses.geojson";
+      const geoJsonUrl11 = "data/fault4Points.geojson"; ///////for distances
+      const geoJsonUrl12 = "data/indoorOutdoor.geojson";
+
+      //leaflet layer control
+
+      var baseMaps = {
+        "Open Street Map": osm,
+        CartoDB_DarkMatter: CartoDB_DarkMatter,
+        Esri_WorldImagery: Esri_WorldImagery,
+      };
+
+      var overlayMaps = {
+        "Geological Bedrock": L.geoJSON(),
+        "Greece Faults": L.geoJSON(),
+        "Radon Concentration city water supply": L.geoJSON(),
+        "Radon Concentration in source water": L.geoJSON(),
+        "Radon Concentration water supply of villages towns": L.geoJSON(),
+        Soil: L.geoJSON(),
+        Mosses: L.geoJSON(),
+        "Indoor and Outdoor": L.geoJSON(),
+        "Greece Regions": L.geoJSON(),
+        "Regional Units of Greece": L.geoJSON(),
+        "Greece Municipalities": L.geoJSON(),
+      };
+
+      var controls = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+      fetch(geoJsonUrl1)
+        .then((response) => response.json())
+        .then((geojsonData) => {
+          const geoJsonLayer1 = L.geoJSON(geojsonData, {
+            style: function (feature) {
+              const firstLetter = feature.properties.GAIOIKANOT.charAt(0);
+              let fillColor = "gray"; // Default color
+
+              // Assign colors based on the first letter
+              if (firstLetter === "Y") {
+                // fillColor = "#fad7ea";roze
+                // } else if (firstLetter === 'F') {
+                //     fillColor = '#fff18c';
+              } else if (firstLetter === "R") {
+                fillColor = "#d5c1de";
+              } else if (firstLetter === "C") {
+                fillColor = "#8864ae";
+              } else if (firstLetter === "T") {
+                fillColor = "#ffffad";
+              } else if (firstLetter === "P") {
+                fillColor = "#85334c";
+              } else if (firstLetter === "X") {
+                fillColor = "#ff9933";
+              } else if (firstLetter === "Z") {
+                fillColor = "#fcaead";
+              } else if (firstLetter === "N") {
+                fillColor = "#e94a4c";
+              } else if (firstLetter === "A") {
+                fillColor = "#fdcc8c";
+              } else if (firstLetter === "K") {
+                fillColor = "#d6efd1";
+              } else if (firstLetter === "H") {
+                fillColor = "#b8d8e9";
+              } else if (firstLetter === "J") {
+                fillColor = "#fdc381";
+              } else if (firstLetter === "V") {
+                fillColor = "#fc998e";
+              } else if (firstLetter === "W") {
+                fillColor = "#ffd7ef";
+              } else if (firstLetter === "L") {
+                fillColor = "#C17A53";
+              } else if (firstLetter === "S") {
+                fillColor = "#765937";
+              } else if (firstLetter === "A") {
+                fillColor = "#fdcc8c";
+              } else if (firstLetter === "E") {
+                fillColor = "#3a6f33";
+              } else if (firstLetter === "B") {
+                fillColor = "#4c93c3";
+              } else if (firstLetter === "B") {
+                fillColor = "#4c93c3";
+              } else if (firstLetter === "M") {
+                fillColor = "#ababab";
+              } else {
+                fillColor = "white";
+              }
+
+              return {
+                fillColor: fillColor,
+                fillOpacity: 0.7,
+                color: "#665c5c",
+                weight: 0.3,
+              };
+            },
+          });
+          // Add the 'memorandum' image when the layer is added to the map
+          geoJsonLayer1.on("add", showMemorandumImage);
+
+          // Hide the 'memorandum' image when the layer is removed from the map
+          geoJsonLayer1.on("remove", hideMemorandumImage);
+
+          overlayMaps["Geological Bedrock"].addLayer(geoJsonLayer1);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON6:", error);
+        });
+
+      // Function to hide the 'memorandum' image
+      function hideMemorandumImage() {
+        const memorandumImage = document.getElementById("memorandum");
+        memorandumImage.style.display = "none";
+      }
+
+      // Function to show the 'memorandum' image
+      function showMemorandumImage() {
+        const memorandumImage = document.getElementById("memorandum");
+        memorandumImage.style.display = "block";
+      }
+
+      ///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+      let geoJsonData1 = null;
+      let geoJsonData2 = null;
+      let geoJsonData3 = null;
+      let geoJsonData4 = null;
+      const legendDiv = document.getElementById("legend");
+
+      const fetchGeoJsonData = async (url) => {
+        const response = await fetch(url);
+        return response.json();
+      };
+
+      // Function to write data to CSV
+      //function writeToCSV(data, filename) {
+      // let csvContent =
+      //   "Nearest Fault Distance,Second Nearest Fault Distance,Mean Value (Bq/L)\n";
+      // data.forEach((item) => {
+      //   csvContent += `${item.nearestFaultDistance},${item.secondNearestFaultDistance},${item.meanValue}\n`;
+      //});
+
+      // const blob = new Blob([csvContent], { type: "text/csv" });
+      // const url = window.URL.createObjectURL(blob);
+      // const a = document.createElement("a");
+      //a.setAttribute("hidden", "");
+      // a.setAttribute("href", url);
+      // a.setAttribute("download", filename);
+      // document.body.appendChild(a);
+      // a.click();
+      // document.body.removeChild(a);
+      // window.URL.revokeObjectURL(url);
+      //}
+
+      Promise.all([
+        fetchGeoJsonData(geoJsonUrl11),
+        fetchGeoJsonData(geoJsonUrl2),
+        fetchGeoJsonData(geoJsonUrl3),
+        fetchGeoJsonData(geoJsonUrl4),
+      ])
+        .then(([data1, data2, data3, data4]) => {
+          // Store fetched data in variables
+          geoJsonData1 = data1;
+          geoJsonData2 = data2;
+          geoJsonData3 = data3;
+          geoJsonData4 = data4;
+
+          // Create GeoJSON layers for each dataset
+          const geoJsonLayer2 = L.geoJSON(geoJsonData2, {
+            pointToLayer: createCircleMarker2,
+          });
+
+          const geoJsonLayer3 = L.geoJSON(geoJsonData3, {
+            pointToLayer: createCircleMarker3,
+          });
+
+          const geoJsonLayer4 = L.geoJSON(geoJsonData4, {
+            pointToLayer: createCircleMarker4,
+          });
+
+          // Add layers to respective layer groups but don't add them to the map initially
+          overlayMaps["Radon Concentration city water supply"].addLayer(
+            geoJsonLayer2
+          );
+          overlayMaps["Radon Concentration in source water"].addLayer(
+            geoJsonLayer3
+          );
+          overlayMaps[
+            "Radon Concentration water supply of villages towns"
+          ].addLayer(geoJsonLayer4);
+
+          // Write data to CSV for each layer
+          //writeToCSV(allDataGeoJsonLayer2, "geoJsonLayer2.csv");
+          //writeToCSV(allDataGeoJsonLayer3, "geoJsonLayer3.csv");
+          //writeToCSV(allDataGeoJsonLayer4, "geoJsonLayer4.csv");
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON data:", error);
+        });
+
+      let allDataGeoJsonLayer2 = [];
+      let allDataGeoJsonLayer3 = [];
+      let allDataGeoJsonLayer4 = [];
+
+      let activeLayerCount = 0;
+      let activeLayer = null;
+
+      map.on("overlayadd", (event) => {
+        const layerName = event.name;
+        if (
+          layerName === "Radon Concentration city water supply" ||
+          layerName === "Radon Concentration in source water" ||
+          layerName === "Radon Concentration water supply of villages towns"
+        ) {
+          activeLayerCount++;
+          legendDiv.style.display = "block";
+        }
+      });
+
+      map.on("overlayremove", (event) => {
+        const layerName = event.name;
+        if (
+          layerName === "Radon Concentration city water supply" ||
+          layerName === "Radon Concentration in source water" ||
+          layerName === "Radon Concentration water supply of villages towns"
+        ) {
+          activeLayerCount--;
+          if (activeLayerCount <= 0) {
+            legendDiv.style.display = "none";
+          }
+        }
+      });
+
+      function latlngToCoordinates(latlng) {
+        return [latlng.lng, latlng.lat];
+      }
+
+      function findNearestFault(coordinates) {
+        let minDistance = Infinity;
+        let secondMinDistance = Infinity;
+        let nearestFaultName = "";
+        let secondNearestFaultName = "";
+
+        for (const feature of geoJsonData1.features) {
+          const coordinate = feature.geometry.coordinates;
+          const distance = turf.distance(coordinates, coordinate, {
+            units: "kilometers",
+          });
+
+          if (distance < minDistance) {
+            secondMinDistance = minDistance;
+            minDistance = distance;
+            secondNearestFaultName = nearestFaultName;
+            nearestFaultName = feature.properties.Name;
+          } else if (
+            distance < secondMinDistance &&
+            feature.properties.Name !== nearestFaultName
+          ) {
+            secondMinDistance = distance;
+            secondNearestFaultName = feature.properties.Name;
+          }
+        }
+
+        // If nearest and second nearest have the same name, find another fault
+        if (nearestFaultName === secondNearestFaultName) {
+          secondMinDistance = Infinity; // Reset secondMinDistance
+
+          for (const feature of geoJsonData1.features) {
+            const name = feature.properties.Name;
+            if (name !== nearestFaultName) {
+              const distance = turf.distance(
+                coordinates,
+                feature.geometry.coordinates,
+                { units: "kilometers" }
+              );
+              if (distance < secondMinDistance) {
+                secondMinDistance = distance;
+                secondNearestFaultName = name;
+              }
+            }
+          }
+        }
+
+        return {
+          nearestFault: { name: nearestFaultName, distance: minDistance },
+          secondNearestFault: {
+            name: secondNearestFaultName,
+            distance: secondMinDistance,
+          },
+        };
+      }
+
+      function createCircleMarker2(feature, latlng) {
+        const pointCoordinates = latlngToCoordinates(latlng);
+        const { nearestFault, secondNearestFault } =
+          findNearestFault(pointCoordinates);
+
+        const measurements = feature.properties["Αριθμός Μετρήσεων"];
+        const meanValue = feature.properties["ΜΕΣΗ ΤΙΜΗ"];
+        const minimum = feature.properties["ΕΛΑΧΙΣΤΟ"];
+        const maximum = feature.properties["ΜΕΓΙΣΤΟ"];
+        const error = feature.properties["ΣΦΑΛΜΑ"];
+        const location = feature.properties["ΠΟΛΗ/ΠΕΡΙΟΧΗ"];
+
+        let circleColor;
+        if (meanValue <= 25) {
+          circleColor = "#eef779";
+        } else if (meanValue <= 50) {
+          circleColor = "hsl(36, 89%, 52%)";
+        } else if (meanValue <= 100) {
+          circleColor = "#e93010";
+        } else {
+          circleColor = "rgb(126, 4, 4)";
+        }
+
+        const circleMarker = L.circleMarker(latlng, {
+          radius: 5,
+          fillColor: circleColor,
+          fillOpacity: 1,
+          color: circleColor,
+          weight: 1,
+          opacity: 1,
+        });
+
+        const nearestFaultDistance = nearestFault.distance.toFixed(2);
+        const secondNearestFaultDistance =
+          secondNearestFault.distance.toFixed(2);
+        const dataToWrite = {
+          nearestFaultDistance,
+          secondNearestFaultDistance,
+          meanValue,
+        };
+        allDataGeoJsonLayer2.push(dataToWrite);
+
+        const popupContent = `
+      <h3>Radioactivity</h3>
+      Measurements : ${measurements}<br>
+      Mean Value (Bq/L): ${meanValue}<br>
+      Minimum (Bq/L): ${minimum}<br>
+      Maximum (Bq/L): ${maximum}<br>
+      Error (± Bq/L): ${error}<br>
+      City/Location: ${location}<br>
+      Nearest Fault Name: ${nearestFault.name}<br>
+      Nearest Fault Distance: ~ ${nearestFault.distance.toFixed(2)} km<br>
+      Second Nearest Fault Name: ${secondNearestFault.name}<br>
+      Second Nearest Fault Distance: ~ ${secondNearestFault.distance.toFixed(
+        2
+      )} km<br>
+      `;
+        circleMarker.bindPopup(popupContent);
+
+        return circleMarker;
+      }
+
+      function createCircleMarker3(feature, latlng) {
+        const pointCoordinates = latlngToCoordinates(latlng);
+        const { nearestFault, secondNearestFault } =
+          findNearestFault(pointCoordinates);
+
+        const meanValue = feature.properties["ΜΕΣΗ ΤΙΜΗ Bq/L"];
+        const meanValueError = feature.properties["ΜΕΣΗ ΤΙΜΗ ± Bq/L"];
+        const date = feature.properties["ΗΜΕΡΟΜΗΝΙΑ"];
+        const location =
+          feature.properties["ΕΥΡΥΤΕΡΗ ΠΕΡΙΟΧΗ (ΠΟΛΗ / ΚΩΜΟΠΟΛΗ / ΧΩΡΙΟ)"];
+        const village = feature.properties["ΧΩΡΙΟ / θΕΡΜΑ"];
+        const source = feature.properties["ΠΗΓΗ"];
+
+        let circleColor;
+        if (meanValue <= 25) {
+          circleColor = "#eef779";
+        } else if (meanValue <= 50) {
+          circleColor = "hsl(36, 89%, 52%)";
+        } else if (meanValue <= 100) {
+          circleColor = "#ea6b55";
+        } else {
+          circleColor = "rgb(126, 4, 4)";
+        }
+
+        const circleMarker = L.circleMarker(latlng, {
+          radius: 10,
+          fillColor: circleColor,
+          fillOpacity: 1,
+          color: circleColor,
+          weight: 1,
+          opacity: 1,
+        });
+
+        const nearestFaultDistance = nearestFault.distance.toFixed(2);
+        const secondNearestFaultDistance =
+          secondNearestFault.distance.toFixed(2);
+        const dataToWrite = {
+          nearestFaultDistance,
+          secondNearestFaultDistance,
+          meanValue,
+        };
+        allDataGeoJsonLayer3.push(dataToWrite);
+
+        const popupContent = `
+      <h3>Radioactivity</h3>
+      Mean Value (Bq/L): ${meanValue}<br>
+      Error (± Bq/L): ${meanValueError}<br>
+      City/Vilage/Town: ${location}<br>
+      Location: ${village}<br>
+      Source: ${source}<br>
+      Nearest Fault Name: ${nearestFault.name}<br>
+      Nearest Fault Distance: ~ ${nearestFault.distance.toFixed(2)} km<br>
+      Second Nearest Fault Name: ${secondNearestFault.name}<br>
+      Second Nearest Fault Distance: ~ ${secondNearestFault.distance.toFixed(
+        2
+      )} km<br>
+      `;
+        circleMarker.bindPopup(popupContent);
+
+        return circleMarker;
+      }
+
+      function createCircleMarker4(feature, latlng) {
+        const pointCoordinates = latlngToCoordinates(latlng);
+        const { nearestFault, secondNearestFault } =
+          findNearestFault(pointCoordinates);
+
+        const meanValue = feature.properties["AVERAGE"]; // Update to correct property name
+        const minimumActivity = feature.properties["MIN"];
+        const maximumActivity = feature.properties["MAX"];
+        const std = feature.properties["STD"];
+        const area = feature.properties["ΚΩΜΟΠΟΛΗ/ΧΩΡΙΟ"];
+        const error = feature.properties["ΕΝΕΡΓΟΤΗΤΑ ± Bq/l"];
+        const population = feature.properties["Πληθυσμός"];
+
+        let circleColor;
+        if (meanValue <= 25) {
+          circleColor = "#eef779";
+        } else if (meanValue <= 50) {
+          circleColor = "hsl(36, 89%, 52%)";
+        } else if (meanValue <= 100) {
+          circleColor = "#e93010";
+        } else {
+          circleColor = "rgb(126, 4, 4)";
+        }
+
+        const circleMarker = L.circleMarker(latlng, {
+          radius: 3,
+          fillColor: circleColor,
+          fillOpacity: 1,
+          color: circleColor,
+          weight: 1,
+          opacity: 1,
+        });
+
+        const nearestFaultDistance = nearestFault.distance.toFixed(2);
+        const secondNearestFaultDistance =
+          secondNearestFault.distance.toFixed(2);
+        const dataToWrite = {
+          nearestFaultDistance,
+          secondNearestFaultDistance,
+          meanValue,
+        };
+        allDataGeoJsonLayer4.push(dataToWrite);
+
+        const popupContent = `
+      <h3>Radioactivity</h3>
+      Mean Value (Bq/L): ${meanValue}<br>
+      Minimum (Bq/L): ${minimumActivity}<br>
+      Maximum (Bq/L): ${maximumActivity}<br>
+      Error (± Bq/L): ${error}<br>
+      STD: ${std}<br>
+      Village/Town: ${area}<br>
+      Population: ${population}<br>
+      Nearest Fault Name: ${nearestFault.name}<br>
+      Nearest Fault Distance: ~ ${nearestFault.distance.toFixed(2)} km<br>
+      Second Nearest Fault Name: ${secondNearestFault.name}<br>
+      Second Nearest Fault Distance: ~ ${secondNearestFault.distance.toFixed(
+        2
+      )} km<br>
+      `;
+        circleMarker.bindPopup(popupContent);
+
+        return circleMarker;
+      }
+
+      /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+      fetch(geoJsonUrl5)
+        .then((response) => response.json())
+        .then((geojsonData5) => {
+          const geoJsonLayer5 = L.geoJSON(geojsonData5, {
+            style: function (feature) {
+              return {
+                fillOpacity: 0.1,
+                fillColor: "red",
+                color: "red",
+                weight: 0.3,
+                opacity: 0.4,
+              };
+            },
+            onEachFeature: function (feature, layer) {
+              layer.bindTooltip(feature.properties.name_greek, {
+                sticky: true,
+              });
+
+              layer.on("mouseover", function () {
+                layer.setStyle({ fillOpacity: 0.5 });
+              });
+              layer.on("mouseout", function () {
+                layer.setStyle({ fillOpacity: 0.1 });
+              });
+            },
+          });
+
+          overlayMaps["Greece Regions"].addLayer(geoJsonLayer5);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 5:", error);
+        });
+
+      fetch(geoJsonUrl6, {
+        method: "GET",
+      })
+        .then((response) => response.json())
+        .then((geojsonData6) => {
+          const geoJsonLayer6 = L.geoJSON(geojsonData6, {
+            style: function (feature) {
+              return {
+                fillOpacity: 0.2,
+                fillColor: "blue",
+                color: "blue",
+                weight: 0.3,
+                opacity: 0.3,
+              };
+            },
+
+            onEachFeature: function (feature, layer) {
+              // layer.bindTooltip(feature.properties.name_greek, { sticky: true });
+              layer.bindTooltip(feature.properties.LEKTIKO, { sticky: true });
+
+              layer.on("mouseover", function (event) {
+                layer.setStyle({ fillOpacity: 0.4 });
+              });
+              layer.on("mouseout", function () {
+                layer.setStyle({ fillOpacity: 0.2 });
+              });
+            },
+          });
+
+          overlayMaps["Regional Units of Greece"].addLayer(geoJsonLayer6);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 6:", error);
+        });
+
+      fetch(geoJsonUrl7)
+        .then((response) => response.json())
+        .then((geojsonData7) => {
+          const geoJsonLayer7 = L.geoJSON(geojsonData7, {
+            style: function (feature) {
+              return {
+                fillOpacity: 0.2,
+                fillColor: "yellow",
+                color: "yellow",
+                weight: 0.3,
+                opacity: 0.3,
+              };
+            },
+            onEachFeature: function (feature, layer) {
+              layer.bindTooltip(feature.properties.NL_NAME_3, { sticky: true });
+
+              layer.on("mouseover", function () {
+                layer.setStyle({ fillOpacity: 0.7 });
+              });
+              layer.on("mouseout", function () {
+                layer.setStyle({ fillOpacity: 0.2 });
+              });
+            },
+          });
+          overlayMaps["Greece Municipalities"].addLayer(geoJsonLayer7);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 7:", error);
+        });
+
+      fetch(geoJsonUrl8)
+        .then((response) => response.json())
+        .then((geojsonData8) => {
+          const geoJsonLayer8 = L.geoJSON(geojsonData8, {
+            style: function (feature) {
+              return {
+                weight: 2,
+                color: "black",
+                opacity: 0.8,
+              };
+            },
+            onEachFeature: function (feature, layer) {
+              layer.on("click", function (event) {
+                // Update the active layer and show the popup content
+                activeLayer = feature;
+                updatePopupContent1(activeLayer);
+
+                // Display the popupInfo container
+                showPopupContainer();
+              });
+
+              layer.on("mouseover", function () {
+                layer.setStyle({
+                  color: "#f7f704",
+                  weight: 3,
+                });
+              });
+
+              layer.on("mouseout", function () {
+                layer.setStyle({
+                  color: "black",
+                  weight: 2,
+                });
+              });
+
+              L.DomEvent.on(layer, "click", function (e) {
+                L.DomEvent.stopPropagation(e);
+              });
+            },
+          });
+          overlayMaps["Greece Faults"].addLayer(geoJsonLayer8);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 8:", error);
+        });
+
+      fetch(geoJsonUrl9)
+        .then((response) => response.json())
+        .then((geojsonData9) => {
+          const geoJsonLayer9 = L.geoJSON(geojsonData9, {
+            pointToLayer: function (feature, latlng) {
+              // Create an HTML string to display selected properties
+              var html = "<h3>Gamma Spectrometry</h3>";
+
+              // Specify the properties you want to include in the popup
+              var includedProperties = [
+                "Location",
+                "Ra-226 (Bq/Kg)",
+                "Th-232 (Bq/Kg)",
+                "K-40  (Bq/Kg)",
+                "Cs-137  (Bq/Kg)",
+                "Total (nSv/h)",
+              ];
+
+              // Iterate through the selected properties and add them to the HTML string
+              includedProperties.forEach(function (prop) {
+                if (feature.properties.hasOwnProperty(prop)) {
+                  html +=
+                    "<b>" + prop + ":</b> " + feature.properties[prop] + "<br>";
+                }
+              });
+
+              return L.circleMarker(latlng, {
+                fillOpacity: 0.8,
+                fillColor: "#3a48c4",
+                color: "#004b88",
+                weight: 1,
+                opacity: 1,
+                radius: 9,
+              }).bindPopup(html); // Bind the popup with the HTML content
+            },
+          });
+          overlayMaps["Soil"].addLayer(geoJsonLayer9);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 9:", error);
+        });
+
+      fetch(geoJsonUrl10)
+        .then((response) => response.json())
+        .then((geojsonData10) => {
+          const geoJsonLayer10 = L.geoJSON(geojsonData10, {
+            pointToLayer: function (feature, latlng) {
+              // Add popup html
+              var html10 = "<h3>Gamma Spectrometry</h3>";
+              var arrayOfProps10 = ["Location", "Cs-137 (Bq/Kg)"];
+
+              arrayOfProps10.forEach(function (prop) {
+                html10 +=
+                  "<strong>" +
+                  prop +
+                  ":</strong> " +
+                  feature.properties[prop] +
+                  "<br />";
+              });
+
+              return L.circleMarker(latlng, {
+                fillOpacity: 0.8,
+                fillColor: "#3a6f33",
+                color: "#3a6f33",
+                weight: 1,
+                opacity: 1,
+                radius: 7,
+              }).bindPopup(html10);
+            },
+          });
+          overlayMaps["Mosses"].addLayer(geoJsonLayer10);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 10:", error);
+        });
+
+      // Function to update the popup content based on the active layer
+      function updatePopupContent1(feature) {
+        var popupContent = ` <strong>Fault Name:</strong> ${feature.properties.Name}<br>
+                               <strong>Length:</strong> ${feature.properties.length_km} km <br>
+                               <strong>Kinematics:</strong> ${feature.properties.Kinematics}<br>
+                               <strong>Monitoring:</strong> ${feature.properties.monitoring}<br>
+                               <strong>Active Reliability:</strong> ${feature.properties.act_reliab}<br>
+                               <strong>Shape Length:</strong> ${feature.properties.Shape_Leng}<br>
+                               <strong>Paleoseismic:</strong> ${feature.properties.paleoseism}<br>
+                               <strong>Historical Seismicity:</strong> ${feature.properties.hist_seism}<br>
+                               <strong>Location Reliability:</strong> ${feature.properties.loc_reliab}<br>
+                               <strong>Slip Rate:</strong> ${feature.properties.slip_rate}<br>
+                               <strong>Instrumental seismicity</strong> ${feature.properties.instr_seis}<br>
+                               <strong>Seismic Event</strong> ${feature.properties.seis_event}<br>
+                               <strong>Risk Level:</strong> ${feature.properties.risk_level}<br>
+                               <strong>Study Quality:</strong> ${feature.properties.study_qual}<br>
+                               <strong>Dip Direction:</strong> ${feature.properties.Dip_Direct}<br>
+                               <strong>Strike</strong> ${feature.properties.strike}<br>
+                               <strong>Dip Angle:</strong> ${feature.properties.dip_angle}<br>
+                               <strong>Rake angle:</strong> ${feature.properties.rake}<br>
+                               <strong>References:</strong> ${feature.properties.References}<br>`;
+
+        var popupInfoElement = document.getElementById("popupInfo");
+        popupInfoElement.innerHTML = popupContent;
+      }
+
+      // Function to show the popupInfo container
+      function showPopupContainer() {
+        var popupInfoElement = document.getElementById("popupInfo");
+        popupInfoElement.style.display = "block";
+      }
+
+      // Function to hide the popupInfo container
+      function hidePopupContainer() {
+        var popupInfoElement = document.getElementById("popupInfo");
+        popupInfoElement.style.display = "none";
+      }
+
+      // Close the popupInfo container when the map is clicked
+      map.on("click", function () {
+        hidePopupContainer();
+      });
+
+      fetch(geoJsonUrl12)
+        .then((response) => response.json())
+        .then((geojsonData12) => {
+          const geoJsonLayer12 = L.geoJSON(geojsonData12, {
+            style: function (feature) {
+              return {
+                fillOpacity: 0.8,
+                fillColor: "#6bcc45",
+                color: "#6bcc45",
+                weight: 0.4,
+                opacity: 1,
+              };
+            },
+            onEachFeature: function (feature, layer) {
+              layer.on("click", function (event) {
+                // Update the active layer and show the popup content
+                activeLayer = feature;
+                updatePopupContent3(activeLayer);
+
+                // Display the popupInfo container
+                showPopupContainer();
+              });
+
+              layer.bindTooltip(feature.properties.NL_NAME_3, { sticky: true });
+
+              layer.on("mouseover", function () {
+                layer.setStyle({ fillColor: "yellow" });
+              });
+              layer.on("mouseout", function () {
+                layer.setStyle({ fillColor: "#6bcc45" });
+              });
+
+              L.DomEvent.on(layer, "click", function (e) {
+                L.DomEvent.stopPropagation(e);
+              });
+            },
+          });
+          overlayMaps["Indoor and Outdoor"].addLayer(geoJsonLayer12);
+        })
+        .catch((error) => {
+          console.error("Error fetching GeoJSON 12:", error);
+        });
+
+      function updatePopupContent3(feature) {
+        var popupContent = `<strong>Municipality Name:</strong> ${feature.properties["NAME_3"]}<br>
+              <strong>Population:</strong> ${feature.properties["Population"]}<br>
+              <strong><h2>Indoor</h2></strong><hr>
+
+              <strong>Number Of Indoor Measurements:</strong> ${feature.properties["NumberOfIndoorMeasurements"]}<br>
+              <strong>Indoor Total Dose Rate(nGy.h-1):</strong> ${feature.properties["in.TotalDoseRate(nGy.h-1)"]}<br>
+              <strong>Indoor Range:</strong> ${feature.properties["in.Range"]}<br>
+              <strong>Uranium Contribution:</strong> ${feature.properties["in.U.Contribution"]}<br>
+              <strong>Uranium Dose Rate:</strong> ${feature.properties["in.U.DoseRate"]}<br>
+              <strong>Uranium Range:</strong> ${feature.properties["in.U.Range"]}<br>
+              <strong>Thorium Dose Rate:</strong> ${feature.properties["in.Th.DoseRate"]}<br>
+              <strong>Thorium Range:</strong> ${feature.properties["in.Th.Range"]}<br>
+              <strong>Thorium Contribution:</strong> ${feature.properties["in.Th.Contribution"]}<br>
+              <strong>Potassium Dose Rate:</strong> ${feature.properties["in.K.DoseRate"]}<br>
+              <strong>Potassium Range:</strong> ${feature.properties["in.K.Range"]}<br>
+              <strong>Potassium Contribution:</strong> ${feature.properties["in.K.Contribution"]}<br>
+              <strong>Cesium Dose Rate:</strong> ${feature.properties["in.Cs.DoseRate"]}<br>
+              <strong>Cesium Range:</strong> ${feature.properties["in.Cs.Range"]}<br>
+              <strong>Cesium Contribution:</strong> ${feature.properties["in.Cs.Contribution"]}<br>
+              <strong><h2>Outdoor</h2></strong><hr>
+              <strong>Number Of Outdoor Measurements:</strong> ${feature.properties["NumberOfOutdoorMeasurements"]}<br>
+              <strong>Outdoor Total Dose Rate(nGy.h-1):</strong> ${feature.properties["out.TotalDoseRate(nGy.h-1)"]}<br>
+              <strong>Outdoor Range:</strong> ${feature.properties["out.Range"]}<br>
+              <strong>Uranium Contribution:</strong> ${feature.properties["out.U.Contribution"]}<br>
+              <strong>Uranium Dose Rate:</strong> ${feature.properties["out.U.DoseRate"]}<br>
+              <strong>Uranium Range:</strong> ${feature.properties["out.U.Range"]}<br>
+              <strong>Thorium Dose Rate:</strong> ${feature.properties["out.Th.DoseRate"]}<br>
+              <strong>Thorium Range:</strong> ${feature.properties["out.Th.Range"]}<br>
+              <strong>Thorium Contribution:</strong> ${feature.properties["out.Th.Contribution"]}<br>
+              <strong>Potassium Dose Rate:</strong> ${feature.properties["out.K.DoseRate"]}<br>
+              <strong>Potassium Range:</strong> ${feature.properties["out.K.Range"]}<br>
+              <strong>Potassium Contribution:</strong> ${feature.properties["out.K.Contribution"]}<br>
+              <strong>Cesium Dose Range:</strong> ${feature.properties["out.Cs.DoseRate"]}<br>
+              <strong>Cesium Range:</strong> ${feature.properties["out.Cs.Range"]}<br>
+              <strong>Cesium Contribution:</strong> ${feature.properties["out.Cs.Contribution"]}<br>`;
+
+        var popupInfoElement = document.getElementById("popupInfo");
+        popupInfoElement.innerHTML = popupContent;
+      }
+
+      // map.on('moveend', function (e) {
+      //     document.getElementById('current_center').textContent =
+      //       map.getCenter().lat + ',' + map.getCenter().lng;
+      // });
+    </script>
+  </body>
+</html>
