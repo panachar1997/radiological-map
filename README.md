@@ -13,12 +13,13 @@ The application brings environmental radioactivity measurements together with ge
 - Fault information panel with geological attributes
 - Layer control, geocoder, fullscreen view, ruler, coordinates, scale, legends, and multiple base maps
 - Responsive standalone layout
+- On-demand loading for large layers, keeping the initial page lightweight
+- Precomputed nearest-fault results for fast radon popups
 
 ## Technologies
 
 - HTML5, CSS3, and JavaScript
 - [Leaflet](https://leafletjs.com/)
-- [Turf.js](https://turfjs.org/)
 - GeoJSON
 - OpenStreetMap, CARTO, and Esri base maps
 
@@ -29,12 +30,20 @@ The project intentionally uses static GeoJSON files rather than a server-side da
 ```text
 .
 ├── index.html
+├── app.js
+├── styles.css
 ├── assets/
 ├── data/
 └── vendor/
 ```
 
-`index.html` contains the application interface and map logic. `data/` contains the GeoJSON layers, `assets/` contains project imagery, and `vendor/` contains the locally hosted Leaflet ruler and fullscreen extensions with their original licences.
+`index.html` contains the application shell, `app.js` contains the map logic, and `styles.css` contains the responsive presentation. `data/` contains the GeoJSON layers, `assets/` contains project imagery, and `vendor/` contains the locally hosted Leaflet ruler and fullscreen extensions with their original licences.
+
+## Performance architecture
+
+The initial thesis version downloaded every scientific and administrative layer as soon as the page opened. This repository uses lazy loading instead: the base map appears first, and each GeoJSON file is downloaded only when its layer is selected.
+
+The nearest and second-nearest fault results for the radon measurements are precomputed in the three radon GeoJSON files. This removes a large fault-vertex helper dataset from the public application and avoids repeating tens of millions of geographic distance comparisons in every visitor's browser.
 
 ## Run locally
 
